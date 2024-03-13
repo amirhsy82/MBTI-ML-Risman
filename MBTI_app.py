@@ -17,10 +17,20 @@ db = SQLAlchemy(app)
 # Database Model
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String(), nullable=False)
-    trans_content = db.Column(db.String(), nullable=False)
-    cleaned_text = db.Column(db.String(), nullable=False)
+    message = db.Column(db.String(), nullable=False)
+    translated_message = db.Column(db.String(), nullable=False)
+    cleaned_message = db.Column(db.String(), nullable=False)
     mbti_type = db.Column(db.String(4), nullable=False)
+
+# loading the ml model
+EI_model = pickle.load(open(r"C:\Users\USER\Documents\GitHub\MBTI-ML-Risman\Resources (weights-vectorizer)\E-I.pkl.txt", 'rb'))
+NS_model = pickle.load(open(r"C:\Users\USER\Documents\GitHub\MBTI-ML-Risman\Resources (weights-vectorizer)\N-S.pkl.txt", 'rb'))
+FT_model = pickle.load(open(r"C:\Users\USER\Documents\GitHub\MBTI-ML-Risman\Resources (weights-vectorizer)\F-T.pkl.txt", 'rb'))
+JP_model = pickle.load(open(r"C:\Users\USER\Documents\GitHub\MBTI-ML-Risman\Resources (weights-vectorizer)\J-P.pkl.txt", 'rb'))
+# loading the vectorizer model
+vectorizer = pickle.load(open(r"C:\Users\USER\Desktop\mbti\Resources (weights-vectorizer)\vectorizer.pkl.txt", 'rb'))
+
+
 
 # loading the ml model
 EI_model = pickle.load(open(r"C:\Users\USER\Desktop\mbti\Resources (weights-vectorizer)\E-I.pkl.txt", 'rb'))
@@ -39,7 +49,6 @@ def index():
 
         # Translate message 
         url = "https://api.edenai.run/v2/translation/automatic_translation"
-
         payload = {
             "response_as_dict": True,
             "attributes_as_list": False,
@@ -49,7 +58,6 @@ def index():
             "target_language": "en",
             "providers": "phedone"
         }
-
         headers = {
             "accept": "application/json",
             "content-type": "application/json",
@@ -58,7 +66,7 @@ def index():
 
         response = requests.post(url, json=payload, headers=headers)
         response = response.json()
-        trans = response['phedone']['text']
+        translated = response['phedone']['text']
 
         # Text Cleaninig
         replacements = [
@@ -68,7 +76,7 @@ def index():
             (r"\d+", " ")]
         
         for old, new in replacements:
-            cleand_message = re.sub(old, new, trans)
+            cleand_message = re.sub(old, new, translated)
     
         
         message = [cleand_message]
@@ -91,9 +99,10 @@ def index():
         # MBTI Character's Message Type
         Type = EI_output + NS_output + FT_output + JP_output
 
-        new_message = Message(content=message_content,
-                            trans_content=trans, 
-                            cleaned_text=message, mbti_type=Type)
+        new_message = Message(message=message_content,
+                            translated_message=translated,
+                            cleaned_message=cleand_message, 
+                            mbti_type=Type)
 
         try:
             db.session.add(new_message)
