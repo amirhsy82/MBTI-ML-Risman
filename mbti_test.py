@@ -1,7 +1,7 @@
 # Importing Packages
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-import psycopg2
+import requests
 import numpy as np
 import pickle
 import re
@@ -18,6 +18,7 @@ db = SQLAlchemy(app)
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(), nullable=False)
+    trans_content = db.Column(db.String(), nullable=False)
     cleaned_text = db.Column(db.String(), nullable=False)
     mbti_type = db.Column(db.String(4), nullable=False)
 
@@ -35,7 +36,30 @@ vectorizer = pickle.load(open(r"C:\Users\USER\Desktop\mbti\Resources (weights-ve
 def index():
     if request.method == 'POST':
         message_content = request.form['message']
-        
+
+        # Translate message 
+        url = "https://api.edenai.run/v2/translation/automatic_translation"
+
+        payload = {
+            "response_as_dict": True,
+            "attributes_as_list": False,
+            "show_original_response": False,
+            "text": message_content, 
+            "source_language": "fa",
+            "target_language": "en",
+            "providers": "phedone"
+        }
+
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZmUzOWZiYmMtYjE1Ni00YmJlLWI5N2YtN2RiODc3Njg4OTA5IiwidHlwZSI6ImFwaV90b2tlbiJ9.aUzU0kVy2DlB9hPWJi2afVR-l3bffeTEfLq1Is6GlLo"
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        response = response.json()
+        trans = response['phedone']['text']
+
         # Text Cleaninig
         replacements = [
             (r"(http.*?\s)", " "),
@@ -44,7 +68,7 @@ def index():
             (r"\d+", " ")]
         
         for old, new in replacements:
-            cleand_message = re.sub(old, new, message_content)
+            cleand_message = re.sub(old, new, trans)
     
         
         message = [cleand_message]
@@ -68,7 +92,8 @@ def index():
         Type = EI_output + NS_output + FT_output + JP_output
 
         new_message = Message(content=message_content,
-                            cleaned_text=cleand_message, mbti_type=Type)
+                            trans_content=trans, 
+                            cleaned_text=message, mbti_type=Type)
 
         try:
             db.session.add(new_message)
