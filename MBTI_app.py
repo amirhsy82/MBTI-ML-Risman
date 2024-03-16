@@ -7,6 +7,7 @@ import pickle
 import re
 
 
+
 # Creating App 
 app = Flask(__name__)
 
@@ -79,10 +80,10 @@ def index():
             cleand_message = re.sub(old, new, translated)
     
         
-        message = [cleand_message]
+        pre_message = [cleand_message]
 
         # vectorize the cleaned text
-        message_vectorized = vectorizer.transform(message)
+        message_vectorized = vectorizer.transform(pre_message)
 
         # Predict the vectorized message
         EI_pred = EI_model.predict(message_vectorized)
@@ -113,9 +114,32 @@ def index():
         
     else:
         messages = Message.query.order_by(Message.id).all()
-        num_messages = Message.query.count()  # Counting the number of messages
-            
-        return render_template('index.html', messages=messages, num_messages=num_messages)
+        num_messages = Message.query.count()
+
+        def Type():
+            type_dict = {}
+            for message in messages:
+                if message.mbti_type not in type_dict.keys():
+                    type_dict.__setitem__(message.mbti_type, 1)
+                else:
+                    type_dict[message.mbti_type] += 1
+            type_dict = dict(sorted(type_dict.items(), key=lambda x:x[1], reverse=True))
+            res = dict(list(type_dict.items())[:2]) 
+            counter = 0
+            for key in type_dict:
+                counter += type_dict[key]
+            typeList = []
+            for key in type_dict:
+                typeList.append(f"You are {type_dict[key]/counter * 100 :.2f}% {key}")
+                
+            return typeList
+        
+        if num_messages >= 2:
+            types = Type()
+            return render_template('index.html', messages=messages, num_messages=num_messages, types=types)
+
+        else: 
+            return render_template('index.html', messages=messages, num_messages=num_messages)
 
 if __name__ == "__main__":
     db.create_all()

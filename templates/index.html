@@ -7,6 +7,9 @@
 </head>
 <body>
     <h1>Message Board</h1>
+    {% for type in types%}
+        <h2> {{type}} </h2>
+    {% endfor %}
     <form action="/" method="POST">
         <label for="message">Enter your message:</label><br>
         <input type="text" id="message" name="message"><br>
